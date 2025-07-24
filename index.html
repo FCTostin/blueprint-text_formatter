@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Форматировщик текста Factorio</title>
+  <meta name="viewport" content="width=800, initial-scale=1">
+  <link rel="icon" href="https://i.ibb.co/7JPQyBf9/scriptingeditor1.png" type="image/png">
+  <style>
+    @font-face {
+      font-family: "Factorio";
+      src: url("https://fonts.cdnfonts.com/s/19687/PressStart2P-Regular.woff") format("woff");
+    }
+
+    :root {
+      --factorio-dark: #262626;
+      --factorio-darker: #1a1a1a;
+      --factorio-mid: #414141;
+      --factorio-accent: #ff9d00;
+      --factorio-accent-dark: #cc7d00;
+      --factorio-text: #e9e9e9;
+      --factorio-yellow: #ffd200;
+      --factorio-blue: #5796c8;
+      --factorio-red: #db2e20;
+      --factorio-green: #8bdc48;
+      --factorio-panel-border: #696969;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: "Factorio", monospace;
+      background: var(--factorio-dark) url('https://i.ibb.co/39K7GFn6/nuclear-ground.png');
+      color: var(--factorio-text);
+      font-size: 13px;
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 30px auto 0 auto;
+      padding: 0 15px;
+      position: relative;
+    }
+
+    .github-corner-link {
+      position: absolute;
+      top: 0;
+      right: 0;
+      z-index: 10;
+      margin: 12px 12px 0 0;
+      text-decoration: none;
+      background: var(--factorio-accent);
+      color: #181818;
+      border: 2px solid var(--factorio-panel-border);
+      border-radius: 6px;
+      padding: 7px 16px 7px 16px;
+      font-family: "Factorio", monospace;
+      font-size: 13px;
+      font-weight: bold;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      box-shadow: 0 0 8px #0006, 0 2px 8px #ff9d0044;
+      transition: background 0.16s, color 0.16s, box-shadow 0.16s;
+      outline: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .github-corner-link:hover {
+      background: var(--factorio-accent-dark);
+      color: #fff;
+      box-shadow: 0 0 18px #ff9d0088, 0 2px 12px #000a;
+      text-decoration: none;
+    }
+    .github-corner-link svg {
+      display: inline;
+      width: 18px;
+      height: 18px;
+      fill: currentColor;
+      margin-right: 3px;
+      margin-bottom: -2px;
+    }
+
+    .factorio-frame {
+      background-color: var(--factorio-mid);
+      border: 3px solid var(--factorio-panel-border);
+      border-radius: 0;
+      position: relative;
+      padding: 30px 20px 30px;
+      margin-bottom: 30px;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+    }
+    .factorio-frame::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 20px;
+      background-color: var(--factorio-panel-border);
+    }
+    .factorio-frame-title {
+      position: absolute;
+      top: 0;
+      left: 12px;
+      height: 20px;
+      line-height: 20px;
+      color: var(--factorio-text);
+      font-size: 10px;
+      text-transform: uppercase;
+      z-index: 1;
+      letter-spacing: 1.5px;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .header h1 {
+      font-size: 24px;
+      color: var(--factorio-yellow);
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+      margin-bottom: 10px;
+    }
+
+    /* Модуль форматирования */
+    .format-panel {
+      background-color: var(--factorio-darker);
+      border: 2px solid #555;
+      margin-bottom: 15px;
+      position: relative;
+      padding-bottom: 16px;
+    }
+    .format-header {
+      background-color: #333;
+      padding: 8px 12px;
+      border-bottom: 2px solid #555;
+      display: flex;
+      align-items: center;
+      font-size: 13px;
+      color: var(--factorio-blue);
+      font-weight: bold;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
+    }
+    .format-icon {
+      width: 32px;
+      height: 32px;
+      background-image: url('https://i.ibb.co/d4Gxc5jW/blueprint2.png');
+      background-size: contain;
+      background-repeat: no-repeat;
+      margin-right: 10px;
+    }
+    .format-body {
+      padding: 20px 10px 0 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .factorio-label {
+      font-size: 13px;
+      color: var(--factorio-yellow);
+      font-weight: bold;
+      margin-bottom: 8px;
+      text-shadow: 1px 1px 2px #0009;
+      text-align: center;
+      letter-spacing: 1px;
+    }
+
+    .factorio-textarea, .result-box {
+      width: 600px;
+      min-width: 600px;
+      max-width: 600px;
+      min-height: 100px;
+      max-height: 300px;
+      height: 100px;
+      margin-bottom: 18px;
+      font-size: 15px;
+      background: #111;
+      color: var(--factorio-text);
+      border: 2px solid #555;
+      border-radius: 0;
+      padding: 12px;
+      font-family: "Consolas", "Fira Mono", "Menlo", "Monaco", monospace;
+      outline: none;
+      box-shadow: 0 1px 6px #0002;
+      resize: vertical;
+      overflow-y: auto;
+      word-break: break-all;
+      overflow-wrap: anywhere;
+      line-break: anywhere;
+      transition: border 0.18s;
+      margin-left: auto;
+      margin-right: auto;
+      display: block;
+    }
+    .factorio-textarea:focus {
+      border-color: var(--factorio-blue);
+    }
+    .result-box {
+      background: #222;
+      color: var(--factorio-yellow);
+      white-space: pre-wrap;
+      border: 2px solid #888;
+      font-weight: bold;
+    }
+    .result-box:focus {
+      border-color: var(--factorio-blue);
+    }
+    .center-row {
+      display: flex;
+      align-items: flex-end;
+      gap: 12px;
+      margin-bottom: 10px;
+      margin-top: 6px;
+      justify-content: center;
+      width: 100%;
+    }
+    .chunk-size-input {
+      width: 90px;
+      font-size: 1.1em;
+      padding: 8px 10px;
+      border: 2px solid #555;
+      border-radius: 0;
+      background: #191919;
+      color: var(--factorio-yellow);
+      outline: none;
+      text-align: center;
+      font-family: inherit;
+      transition: border 0.18s;
+      margin-left: 7px;
+      margin-right: 10px;
+    }
+    .chunk-size-input:focus {
+      border-color: var(--factorio-blue);
+    }
+    .mode-select-container {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin: 0 0 18px 0;
+      justify-content: flex-end;
+    }
+    .mode-label {
+      color: var(--factorio-yellow);
+      font-size: 1em;
+      font-weight: bold;
+      letter-spacing: .7px;
+    }
+    .mode-dropdown {
+      appearance: none;
+      border: 2px solid #aaa;
+      border-radius: 0;
+      background: #323232;
+      color: var(--factorio-yellow);
+      font-size: 1.07em;
+      padding: 6px 20px 6px 10px;
+      font-family: inherit;
+      cursor: pointer;
+      min-width: 130px;
+      box-shadow: 0 1px 3px #0002;
+      transition: border 0.18s;
+    }
+    .mode-dropdown:focus {
+      border-color: var(--factorio-blue);
+      outline: none;
+    }
+    .factorio-button {
+      background-color: var(--factorio-mid);
+      border: 2px solid #555;
+      color: var(--factorio-yellow);
+      padding: 10px 24px;
+      font-family: "Factorio", monospace;
+      font-size: 13px;
+      cursor: pointer;
+      margin: 0 5px 5px 5px;
+      text-transform: uppercase;
+      box-shadow: inset 0 0 5px rgba(255, 255, 255, 0.1);
+      transition: background-color 0.21s, color 0.18s;
+      border-radius: 0;
+      font-weight: bold;
+      letter-spacing: 1.2px;
+      outline: none;
+      display: block;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .factorio-button:hover {
+      background-color: #505050;
+      color: var(--factorio-yellow);
+    }
+    .factorio-button:active {
+      background-color: #333;
+    }
+    .factorio-button.copied {
+      background: var(--factorio-green) !important;
+      color: #fff !important;
+      box-shadow: 0 0 15px 2px #5fcf87cc;
+    }
+    .info {
+      margin-top: 12px;
+      font-size: 12px;
+      color: #bbb;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 18px;
+      justify-content: center;
+      width: 100%;
+      text-align: center;
+    }
+    .info p {
+      margin: 0;
+      padding: 0;
+    }
+    .footer {
+      margin-top: 40px;
+      padding-top: 18px;
+      border-top: 2px solid #555;
+      display: flex;
+      justify-content: center;
+      gap: 36px;
+      font-size: 11px;
+      color: #777;
+      text-align: center;
+      flex-wrap: wrap;
+    }
+    .footer a {
+      color: var(--factorio-blue);
+      text-decoration: none;
+    }
+    .footer a:hover {
+      text-decoration: underline;
+    }
+    @media (max-width: 900px) {
+      .container { max-width: 99vw; }
+      .factorio-frame { padding: 12px 3vw 16px 3vw; }
+      .factorio-textarea, .result-box { width: 98vw; min-width: 0; max-width: 100vw; }
+      .github-corner-link { right: 2vw; }
+    }
+    @media (max-width: 700px) {
+      .center-row { flex-direction: column; gap: 8px; }
+      .mode-select-container { flex-direction: column; gap: 6px; }
+    }
+    @media (max-width: 650px) {
+      .container { max-width: 100vw; }
+      .factorio-frame { padding: 7px 1vw 10px 1vw; }
+      .factorio-textarea, .result-box { width: 98vw; min-width: 0; max-width: 100vw; }
+      .github-corner-link { right: 1vw; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="https://fctostin.github.io/blueprint-code_compression" class="github-corner-link" target="_blank" title="Перейти на GitHub Copilot">
+      <svg viewBox="0 0 24 24">
+        <path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.799 8.205 11.387.6.111.82-.261.82-.577v-2.165c-3.338.726-4.033-1.416-4.033-1.416C4.422 17.872 3.633 17.5 3.633 17.5c-1.087-.744.083-.729.083-.729 1.205.084 1.84 1.237 1.84 1.237 1.07 1.834 2.809 1.304 3.495.997.108-.775.418-1.304.76-1.604-2.665-.303-5.466-1.332-5.466-5.931 0-1.31.469-2.381 1.236-3.221-.124-.303-.535-1.523.117-3.176 0 0 1.008-.322 3.301 1.23a11.49 11.49 0 013.003-.404c1.02.005 2.049.138 3.003.404 2.291-1.553 3.297-1.23 3.297-1.23.654 1.653.243 2.873.12 3.176.77.84 1.235 1.911 1.235 3.221 0 4.61-2.804 5.625-5.475 5.921.43.371.813 1.102.813 2.222v3.293c0 .319.216.694.825.576C20.565 21.796 24 17.297 24 12c0-6.63-5.373-12-12-12z"/>
+      </svg>
+      GitHub Copilot
+    </a>
+    <div class="header">
+      <h1>FCT ТЕКСТОВЫЙ ФОРМАТИРОВЩИК</h1>
+    </div>
+    <div class="factorio-frame">
+      <div class="factorio-frame-title">ТЕКСТОВЫЙ ПАНЕЛЬ-ФОРМАТТЕР</div>
+      <div class="format-panel">
+        <div class="format-header">
+          <div class="format-icon"></div>
+          <div>Форматирование строки</div>
+        </div>
+        <div class="format-body">
+          <div class="mode-select-container">
+            <span class="mode-label">Режим:</span>
+            <select id="mode-select" class="mode-dropdown">
+              <option value="normal">Обычный перенос</option>
+              <option value="tail">Перенос только последних</option>
+            </select>
+          </div>
+          <label class="factorio-label" for="inputText">Введите текст:</label>
+          <textarea id="inputText" class="factorio-textarea" placeholder="Вставьте сюда ваш текст..."></textarea>
+          <div class="center-row">
+            <span class="factorio-label" style="font-size:1.07em;margin-bottom:0;">Результат:</span>
+            <input type="number" min="1" max="500" step="1" id="chunk-size-input" class="chunk-size-input" value="98">
+          </div>
+          <div id="outputText" class="result-box" tabindex="0"></div>
+          <button id="copyButton" class="factorio-button">Скопировать</button>
+          <div class="info">
+            <p>Символов в исходном тексте: <span id="charCount">0</span></p>
+            <p>Строк в результате: <span id="lineCount">0</span></p>
+            <p>Длина строки: <span id="lineLength">0</span></p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="footer">
+      <p>🐞 <a href="https://www.youtube.com/@FCT-Ostin" target="_blank">YouTube</a></p>
+      <p>💙 <a href="https://t.me/FCTostin" target="_blank">Telegram</a></p>
+      <p>🎮 <a href="https://steamcommunity.com/groups/FCTgroup" target="_blank">Steam Group</a></p>
+      <p>🕹 <a href="https://www.patreon.com/c/OstinFCT" target="_blank">Patreon</a></p>
+      <p>🪐 <a href="https://boosty.to/ostinfct" target="_blank">Boosty</a></p>
+      <p>Создано при поддержке Телеграм сообщества FCTostin</p>
+    </div>
+  </div>
+  <script>
+    function setStorage(key, value) {
+      try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+    }
+    function getStorage(key, def) {
+      try {
+        let v = localStorage.getItem(key);
+        return v === null ? def : JSON.parse(v);
+      } catch { return def; }
+    }
+    const inputText = document.getElementById('inputText');
+    const outputText = document.getElementById('outputText');
+    const copyButton = document.getElementById('copyButton');
+    const charCount = document.getElementById('charCount');
+    const lineCount = document.getElementById('lineCount');
+    const lineLength = document.getElementById('lineLength');
+    const chunkSizeInput = document.getElementById('chunk-size-input');
+    const modeSelect = document.getElementById('mode-select');
+
+    modeSelect.value = getStorage('pr98_mode', 'normal');
+    let chunkSizeMap = getStorage('pr98_chunks', {normal:98, tail:50});
+    let lastMode = modeSelect.value;
+    chunkSizeInput.value = chunkSizeMap[lastMode] || (lastMode === 'normal'?98:50);
+    inputText.value = getStorage('pr98_text', '');
+
+    function cleanText(txt) {
+      return txt.replace(/\s+/g, '');
+    }
+    function formatNormal(text, chunkSize) {
+      let result = '';
+      for(let i=0; i<text.length; i+=chunkSize) {
+        if(i>0) result+='\n';
+        result+=text.slice(i, i+chunkSize);
+      }
+      return result;
+    }
+    function formatTail(text, tailLen) {
+      if (text.length <= tailLen) return text;
+      let head = text.slice(0, text.length-tailLen);
+      let tail = text.slice(-tailLen);
+      let tailLines = '';
+      for(let i=0; i<tail.length; i+=tailLen) {
+        if(i>0) tailLines+='\n';
+        tailLines+=tail.slice(i, i+tailLen);
+      }
+      return head + '\n' + tailLines;
+    }
+    function autoResizeTextarea(el) {
+      el.style.height = "100px";
+      if (el.scrollHeight > 100) {
+        let h = Math.min(el.scrollHeight, 300);
+        el.style.height = h + "px";
+        el.style.overflowY = h === 300 ? "auto" : "hidden";
+      } else {
+        el.style.overflowY = "hidden";
+      }
+    }
+    function autoResizeDiv(div) {
+      div.style.height = "100px";
+      setTimeout(function(){
+        if (div.scrollHeight > 100) {
+          let h = Math.min(div.scrollHeight, 300);
+          div.style.height = h + "px";
+          div.style.overflowY = h === 300 ? "auto" : "hidden";
+        } else {
+          div.style.overflowY = "hidden";
+        }
+      }, 1);
+    }
+    function updateAll() {
+      let mode = modeSelect.value;
+      let chunkSize = parseInt(chunkSizeInput.value)||1;
+      let rawText = inputText.value;
+      let cleaned = cleanText(rawText);
+
+      setStorage('pr98_mode', mode);
+      chunkSizeMap[mode] = chunkSize;
+      setStorage('pr98_chunks', chunkSizeMap);
+      setStorage('pr98_text', rawText);
+
+      let formatted = '';
+      if(mode==='normal') {
+        formatted = formatNormal(cleaned, chunkSize);
+      } else {
+        formatted = formatTail(cleaned, chunkSize);
+      }
+      outputText.textContent = formatted;
+      charCount.textContent = cleaned.length;
+      let lines = formatted ? formatted.split('\n').length : 0;
+      lineCount.textContent = lines;
+      lineLength.textContent = chunkSize;
+
+      autoResizeTextarea(inputText);
+      autoResizeDiv(outputText);
+    }
+    let copyTimeout;
+    copyButton.addEventListener('click', function() {
+      let txt = outputText.textContent;
+      navigator.clipboard.writeText(txt);
+      copyButton.classList.add('copied');
+      clearTimeout(copyTimeout);
+      copyTimeout = setTimeout(() => copyButton.classList.remove('copied'), 900);
+    });
+    inputText.addEventListener('input', updateAll);
+    inputText.addEventListener('input', function(){autoResizeTextarea(inputText)});
+    chunkSizeInput.addEventListener('input', function(){
+      let v = parseInt(chunkSizeInput.value) || 1;
+      chunkSizeInput.value = v;
+      updateAll();
+    });
+    modeSelect.addEventListener('change', function(){
+      let m = modeSelect.value;
+      chunkSizeInput.value = chunkSizeMap[m] || (m==='normal'?98:50);
+      updateAll();
+    });
+    let lastX = 0, lastY = 0;
+    document.addEventListener('mousemove', function(e) {
+      const x = Math.round(e.clientX / window.innerWidth * 5) - 1;
+      const y = Math.round(e.clientY / window.innerHeight * 5) - 1;
+      if (x !== lastX || y !== lastY) {
+        document.body.style.backgroundPosition = `${x*1}px ${y*1}px`;
+        lastX = x; lastY = y;
+      }
+    });
+
+    updateAll();
+    autoResizeTextarea(inputText);
+    autoResizeDiv(outputText);
+  </script>
+</body>
+</html>
